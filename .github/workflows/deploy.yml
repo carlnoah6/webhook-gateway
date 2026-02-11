@@ -1,11 +1,14 @@
 name: Deploy
 
 on:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
 
 jobs:
-  build-and-deploy:
+  build-and-push:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,29 +30,3 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/carlnoah6/webhook-gateway:latest
-
-      # In a real scenario, we would trigger a deployment here.
-      # For now, we assume the self-hosted runner or a separate process pulls the image.
-      # Or we can use SSH to deploy if configured. 
-      # Since the instructions say "deploy.yml: build Docker image -> push ghcr.io -> self-hosted runner docker compose pull && up -d"
-      # And we don't have a self-hosted runner *in GitHub Actions* context usually (unless registered).
-      # Assuming this repo might use a self-hosted runner, OR we just build/push here and the user manually deploys as per step 6.
-      # But step 4 says "self-hosted runner docker compose pull && up -d".
-      # If the runner IS the deployment target, we can run the command directly.
-      
-      # However, since I am the agent configuring this on the server, I will likely set up the runner or just run the command manually for now.
-      # The standard requirement is to have the workflow file. 
-      # I will add a dummy step for deployment or assume a runner is available.
-      # If no runner is registered, this job might hang if we target 'self-hosted'.
-      # I'll stick to ubuntu-latest for build/push, and the "deployment" part might be manual or via a separate job targeting self-hosted if it existed.
-      # Given the prompt, I will assume the intent is that the "deploy" job *runs* on the self-hosted runner.
-      
-  deploy:
-    needs: build-and-deploy
-    runs-on: self-hosted
-    steps:
-      - name: Deploy
-        run: |
-          cd /home/ubuntu/webhook-gateway
-          docker compose pull
-          docker compose up -d

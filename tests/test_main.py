@@ -1,10 +1,11 @@
+import hashlib
+import hmac
 import json
 import os
-import hmac
-import hashlib
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
 # Mock environment variables before importing app
 os.environ["LARK_APP_ID"] = "test_app_id"
@@ -68,15 +69,17 @@ def test_lark_challenge():
 
 @patch("src.webhook.lark.asyncio.create_subprocess_exec")
 def test_lark_dashboard_refresh(mock_subprocess):
-    # Mock subprocess
+    # Mock subprocess to return valid card JSON
+    card = {
+        "config": {},
+        "header": {"title": {"tag": "plain_text", "content": "test"}},
+        "elements": [],
+    }
+    card_json = json.dumps(card)
     mock_proc = MagicMock()
-    mock_proc.communicate.return_value = (b"ok", b"")
+    mock_proc.communicate = AsyncMock(return_value=(card_json.encode(), b""))
     mock_proc.returncode = 0
-    
-    # Setup async mock
-    async def async_mock(*args, **kwargs):
-        return mock_proc
-    mock_subprocess.side_effect = async_mock
+    mock_subprocess.return_value = mock_proc
 
     payload = {
         "header": {"event_type": "card.action.trigger"},
@@ -87,10 +90,10 @@ def test_lark_dashboard_refresh(mock_subprocess):
             }
         }
     }
-    
-    # We use TestClient which runs synchronously, but FastAPI handles async endpoints.
-    # Background tasks run after the response.
+
     with TestClient(app) as tc:
         response = tc.post("/webhook/lark", json=payload)
         assert response.status_code == 200
-        assert response.json()["toast"]["type"] == "success"
+        data = response.json()
+        # Should return card JSON directly (not a toast)
+        assert "elements" in data

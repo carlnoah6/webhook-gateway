@@ -3,9 +3,10 @@ import hashlib
 import hmac
 import json
 import time
-import subprocess
+
 from fastapi import APIRouter, Request, Response
-from ..config import log, WEBHOOK_SECRET_FILE, CI_EVENT_DIR
+
+from ..config import CI_EVENT_DIR, WEBHOOK_SECRET_FILE, log
 
 router = APIRouter()
 
@@ -50,7 +51,7 @@ def _save_event(message: str, data: dict):
         event_file = CI_EVENT_DIR / filename
         event_file.write_text(json.dumps(event_data, indent=2))
         log.info(f"CI event saved: {event_file.name}")
-        
+
         # Trigger OpenClaw wake - using host gateway due to docker isolation
         # We can't easily run 'openclaw' command from inside docker if it's not installed.
         # But Phase 2 architecture implies we just drop the file and Luna picks it up via heartbeat?
@@ -70,7 +71,7 @@ def _format_message(data: dict) -> str | None:
     conclusion = workflow_run.get("conclusion", "unknown")
     run_url = workflow_run.get("html_url", "")
     branch = workflow_run.get("head_branch", "unknown")
-    
+
     head_commit = workflow_run.get("head_commit")
     commit_msg = head_commit.get("message", "").split("\n")[0] if head_commit else ""
 
@@ -114,7 +115,7 @@ async def github_webhook(request: Request):
     body = await request.body()
     secret = _load_secret()
     signature = request.headers.get("x-hub-signature-256", "")
-    
+
     if not _verify_signature(body, signature, secret):
         log.warning("GitHub webhook: invalid signature")
         return Response(content="Invalid signature", status_code=401)

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
+
 from .webhook import github, lark
-from .config import log
 
 app = FastAPI(title="Webhook Gateway")
 

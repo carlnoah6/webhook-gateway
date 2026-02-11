@@ -1,10 +1,11 @@
+import hashlib
+import hmac
 import json
 import os
-import hmac
-import hashlib
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
 # Mock environment variables before importing app
 os.environ["LARK_APP_ID"] = "test_app_id"
@@ -72,7 +73,7 @@ def test_lark_dashboard_refresh(mock_subprocess):
     mock_proc = MagicMock()
     mock_proc.communicate.return_value = (b"ok", b"")
     mock_proc.returncode = 0
-    
+
     # Setup async mock
     async def async_mock(*args, **kwargs):
         return mock_proc
@@ -87,7 +88,7 @@ def test_lark_dashboard_refresh(mock_subprocess):
             }
         }
     }
-    
+
     # We use TestClient which runs synchronously, but FastAPI handles async endpoints.
     # Background tasks run after the response.
     with TestClient(app) as tc:

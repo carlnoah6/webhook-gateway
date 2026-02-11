@@ -6,7 +6,11 @@ services:
     ports:
       - "8280:8280"
     volumes:
+      # Mount the entire workspace to support absolute paths in legacy scripts
+      - /home/ubuntu/.openclaw/workspace:/home/ubuntu/.openclaw/workspace
+      # Mount the event directory explicitly (redundant but safe)
       - /home/ubuntu/.openclaw/workspace/data/ci-events:/app/ci-events
+      # Mount secret file
       - ./webhook_secret.txt:/app/webhook_secret.txt:ro
     environment:
       - PORT=8280
@@ -15,7 +19,7 @@ services:
       - CI_EVENT_DIR=/app/ci-events
       - LARK_APP_ID=${LARK_APP_ID}
       - LARK_APP_SECRET=${LARK_APP_SECRET}
-      - LARK_TOKEN_FILE=/app/data/lark-user-token.json
+      # Point to the script location in the mounted workspace
       - DASHBOARD_REFRESH_SCRIPT=/home/ubuntu/.openclaw/workspace/scripts/lark-task-dashboard.py
     extra_hosts:
       - "host.docker.internal:host-gateway"

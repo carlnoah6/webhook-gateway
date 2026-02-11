@@ -1,81 +1,64 @@
-# webhook-gateway
+# Webhook Gateway
 
-Webhook gateway service for CI/CD notifications and Lark card callbacks.
+A dedicated gateway for handling GitHub webhooks (CI/CD notifications) and Lark/Feishu card callbacks.
 
-## Overview
+## Features
 
-This service consolidates webhook handling into a single lightweight gateway:
+- **GitHub Webhook**: Receives `workflow_run` events, verifies signatures, and saves event data for Luna to process.
+- **Lark Webhook**: Handles Lark card interactions (buttons) and challenges.
+- **Dashboard Refresh**: Triggers local scripts to refresh the Luna task dashboard.
 
-- **`/webhook/github`** — Receives GitHub `workflow_run` events, verifies HMAC-SHA256 signatures, and saves event files for downstream processing.
-- **`/webhook/lark`** — Handles Lark challenge verification, card action callbacks (e.g. dashboard refresh), and OAuth login flow.
-- **`/health`** — Health check endpoint.
+## Architecture
 
-## Quick Start
-
-### Local Development
-
-```bash
-pip install -r requirements.txt
-pip install ruff pytest pytest-asyncio
-
-# Run tests
-pytest tests/ -v
-
-# Run server
-python -m uvicorn src.app:app --host 0.0.0.0 --port 8280
-```
-
-### Docker
-
-```bash
-docker compose up -d
-```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `8280` | Server listen port |
-| `WEBHOOK_SECRET_FILE` | `/app/webhook_secret.txt` | Path to GitHub webhook HMAC secret file |
-| `CI_EVENT_DIR` | `/app/ci-events` | Directory to save CI event JSON files |
-| `LARK_APP_ID` | (empty) | Lark application ID |
-| `LARK_APP_SECRET` | (empty) | Lark application secret |
-| `LARK_TOKEN_FILE` | `/app/data/lark-user-token.json` | Path to store Lark user access token |
-| `OPENCLAW_WEBHOOK_URL` | `http://localhost:18789/webhook/lark` | URL to forward non-dashboard card actions |
-| `DASHBOARD_REFRESH_SCRIPT` | (see config.py) | Path to dashboard refresh script |
+- **Port**: 8280
+- **Container**: Dockerized Python (FastAPI) application.
+- **Data Persistence**: Mounts host directories to save events and access shared scripts.
 
 ## Deployment
 
-### Docker Compose (Production)
+### Prerequisites
 
-1. Copy `webhook_secret.txt` to the deployment directory.
-2. Set environment variables (e.g. via `.env` file):
+- Docker & Docker Compose
+- Environment variables configured (see below)
+- `webhook_secret.txt` present for GitHub signature verification.
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/carlnoah6/webhook-gateway.git
+   cd webhook-gateway
    ```
-   LARK_APP_ID=your_app_id
-   LARK_APP_SECRET=your_app_secret
-   ```
-3. Start the service:
+
+2. Configure environment (`.env` or via docker-compose):
+   - `LARK_APP_ID`
+   - `LARK_APP_SECRET`
+
+3. Ensure secrets exist:
+   - `webhook_secret.txt` (GitHub webhook secret)
+
+4. Run:
    ```bash
    docker compose up -d
    ```
 
-### CI/CD
+## Environment Variables
 
-- **CI** (`ci.yml`): Runs lint (ruff) and tests (pytest) on every PR.
-- **Deploy** (`deploy.yml`): On push to main, builds Docker image, pushes to `ghcr.io/carlnoah6/webhook-gateway`, and deploys via self-hosted runner.
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Service port | `8280` |
+| `LARK_APP_ID` | Lark App ID | Required |
+| `LARK_APP_SECRET` | Lark App Secret | Required |
+| `OPENCLAW_WEBHOOK_URL` | Upstream OpenClaw webhook URL | `http://host.docker.internal:18789/webhook/lark` |
+| `WEBHOOK_SECRET_FILE` | Path to GitHub secret file | `/app/webhook_secret.txt` |
+| `CI_EVENT_DIR` | Directory to save CI events | `/app/ci-events` |
+| `DASHBOARD_REFRESH_SCRIPT` | Path to dashboard script | (mounted path) |
 
-## Architecture
+## Development
 
-```
-GitHub ──webhook──> /webhook/github ──> CI event files (JSON)
-                                           └──> OpenClaw wake trigger
-
-Lark   ──callback──> /webhook/lark
-                       ├── challenge ──> echo challenge token
-                       ├── refresh_dashboard ──> run script
-                       ├── other card action ──> forward to OpenClaw
-                       └── OAuth GET ──> exchange code for token
-```
+- **Linting**: `ruff check .`
+- **Testing**: `pytest`
+- **Security**: `gitleaks detect`
 
 ## License
 

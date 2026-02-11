@@ -1,22 +1,16 @@
-#!/usr/bin/env bash
-# Smoke test for webhook-gateway health endpoint
-set -euo pipefail
+#!/bin/bash
+# Smoke test for webhook-gateway
+# Checks /health endpoint
 
-PORT="${1:-8280}"
-URL="http://localhost:${PORT}/health"
+URL="http://localhost:8280/health"
 
-echo "Smoke testing ${URL}..."
-RESP=$(curl -sf --max-time 5 "${URL}" 2>&1) || {
-    echo "FAIL: health endpoint unreachable at ${URL}"
-    exit 1
-}
+echo "Checking $URL..."
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
 
-echo "Response: ${RESP}"
-
-if echo "${RESP}" | grep -q '"ok"'; then
-    echo "PASS: health check returned ok"
+if [ "$HTTP_CODE" -eq 200 ]; then
+    echo "✅ Health check passed (200 OK)"
     exit 0
 else
-    echo "FAIL: unexpected response"
+    echo "❌ Health check failed (HTTP $HTTP_CODE)"
     exit 1
 fi

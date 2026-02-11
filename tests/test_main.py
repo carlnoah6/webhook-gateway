@@ -69,15 +69,9 @@ def test_lark_challenge():
 
 @patch("src.webhook.lark.asyncio.create_subprocess_exec")
 def test_lark_dashboard_refresh(mock_subprocess):
-    # Mock subprocess to return valid card JSON
-    card = {
-        "config": {},
-        "header": {"title": {"tag": "plain_text", "content": "test"}},
-        "elements": [],
-    }
-    card_json = json.dumps(card)
+    # Mock subprocess (lark-task-dashboard.py) to succeed
     mock_proc = MagicMock()
-    mock_proc.communicate = AsyncMock(return_value=(card_json.encode(), b""))
+    mock_proc.communicate = AsyncMock(return_value=(b'{"ok": true}', b""))
     mock_proc.returncode = 0
     mock_subprocess.return_value = mock_proc
 
@@ -94,6 +88,5 @@ def test_lark_dashboard_refresh(mock_subprocess):
     with TestClient(app) as tc:
         response = tc.post("/webhook/lark", json=payload)
         assert response.status_code == 200
-        data = response.json()
-        # Should return card JSON directly (not a toast)
-        assert "elements" in data
+        # Should return empty dict (PATCH done by the script)
+        assert response.json() == {}

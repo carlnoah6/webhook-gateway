@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+.pytest_cache/
+.venv/
+*.egg-info/
+dist/
+build/
+webhook_secret.txt
+.env

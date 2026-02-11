@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-docker:
+    name: Deploy via Docker
+    runs-on: self-hosted
+    steps:
+      - name: Pull and deploy
+        run: |
+          cd /home/ubuntu/webhook-gateway
+          docker compose pull
+          docker compose up -d
+          sleep 5
+
+      - name: Smoke test
+        run: |
+          cd /home/ubuntu/webhook-gateway
+          bash scripts/smoke-test.sh 8280

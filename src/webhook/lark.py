@@ -69,8 +69,32 @@ async def lark_webhook(request: Request, background_tasks: BackgroundTasks):
         # Check for specific 'refresh_dashboard' action
         if isinstance(action_value, dict) and action_value.get("action") == "refresh_dashboard":
             log.info("Received refresh_dashboard action")
-            background_tasks.add_task(run_refresh_script)
-            return {"toast": {"type": "success", "content": "Refreshing dashboard..."}}
+            try:
+                # Build fresh card JSON via card-builder (reads workspace/data/)
+                card_builder = os.path.join(
+                    os.path.dirname(DASHBOARD_REFRESH_SCRIPT),
+                    "lark-card-builder.py",
+                )
+                proc = await asyncio.create_subprocess_exec(
+                    "python3",
+                    card_builder,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(), timeout=15
+                )
+                if proc.returncode != 0:
+                    raise RuntimeError(stderr.decode()[:100])
+
+                # Return card JSON directly in callback response.
+                # Lark updates the card in-place from the response content.
+                card = json.loads(stdout.decode())
+                log.info("Dashboard card rebuilt, returning inline")
+                return card
+            except Exception as e:
+                log.error(f"Dashboard refresh failed: {e}")
+                return {"toast": {"type": "error", "content": f"Refresh failed: {str(e)[:50]}"}}
         
         # Forward other actions to OpenClaw
         try:

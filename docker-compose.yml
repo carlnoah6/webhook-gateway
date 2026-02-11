@@ -1,6 +1,6 @@
 services:
   webhook-gateway:
-    image: ghcr.io/carlnoah6/webhook-gateway:latest
+    image: webhook-gateway:local
     container_name: webhook-gateway
     restart: unless-stopped
     ports:
